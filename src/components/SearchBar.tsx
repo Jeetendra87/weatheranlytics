@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAppDispatch } from '../store';
 import { addFavorite } from '../store/slices/favoritesSlice';
 import { fetchCurrentWeather } from '../store/slices/weatherSlice';
@@ -14,8 +15,31 @@ export function SearchBar({ onSelect }: SearchBarProps) {
   const [results, setResults] = useState<City[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [dropdownRect, setDropdownRect] = useState<{ top: number; left: number; width: number } | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const containerRef = useRef<HTMLDivElement>(null);
   const dispatch = useAppDispatch();
+
+  const updateDropdownRect = useCallback(() => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setDropdownRect({ top: rect.bottom + 8, left: rect.left, width: rect.width });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!open || results.length === 0) {
+      setDropdownRect(null);
+      return;
+    }
+    updateDropdownRect();
+    window.addEventListener('scroll', updateDropdownRect, true);
+    window.addEventListener('resize', updateDropdownRect);
+    return () => {
+      window.removeEventListener('scroll', updateDropdownRect, true);
+      window.removeEventListener('resize', updateDropdownRect);
+    };
+  }, [open, results.length, updateDropdownRect]);
 
   const search = useCallback(async (q: string) => {
     if (!q.trim()) {
@@ -56,8 +80,29 @@ export function SearchBar({ onSelect }: SearchBarProps) {
     onSelect?.(city);
   };
 
+  const dropdown = open && results.length > 0 && dropdownRect && createPortal(
+    <ul
+      className="fixed z-[9999] max-h-60 overflow-auto rounded-xl border border-sky-200 bg-white py-2 shadow-xl"
+      style={{ top: dropdownRect.top, left: dropdownRect.left, width: dropdownRect.width }}
+    >
+      {results.map((city) => (
+        <li key={city.id}>
+          <button
+            type="button"
+            onClick={() => handleSelect(city)}
+            className="flex w-full cursor-pointer items-center justify-between px-4 py-3 text-left text-slate-700 hover:bg-sky-50"
+          >
+            <span className="font-medium text-slate-800">{city.name}</span>
+            <span className="text-sm text-slate-500">{city.country}</span>
+          </button>
+        </li>
+      ))}
+    </ul>,
+    document.body
+  );
+
   return (
-    <div className="relative w-full min-w-[140px] max-w-[260px] sm:min-w-[160px] sm:max-w-[300px]">
+    <div ref={containerRef} className="relative w-full min-w-[140px] max-w-[260px] sm:min-w-[160px] sm:max-w-[300px]">
       <div className="flex h-11 items-center rounded-xl border border-sky-200 bg-white shadow-sm">
         <span className="flex h-full items-center pl-4 text-sky-500">
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -78,22 +123,7 @@ export function SearchBar({ onSelect }: SearchBarProps) {
           </span>
         )}
       </div>
-      {open && results.length > 0 && (
-        <ul className="absolute top-full left-0 right-0 z-[100] mt-2 max-h-60 overflow-auto rounded-xl border border-sky-200 bg-white py-2 shadow-xl">
-          {results.map((city) => (
-            <li key={city.id}>
-              <button
-                type="button"
-                onClick={() => handleSelect(city)}
-                className="flex w-full cursor-pointer items-center justify-between px-4 py-3 text-left text-slate-700 hover:bg-sky-50"
-              >
-                <span className="font-medium text-slate-800">{city.name}</span>
-                <span className="text-sm text-slate-500">{city.country}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      {dropdown}
     </div>
   );
 }
