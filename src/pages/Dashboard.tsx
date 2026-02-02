@@ -1,5 +1,8 @@
+import { useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
+import { useAppDispatch } from '../store';
+import { fetchCurrentWeather } from '../store/slices/weatherSlice';
 import { SearchBar } from '../components/SearchBar';
 import { CityCard } from '../components/CityCard';
 import { Settings } from '../components/Settings';
@@ -7,10 +10,24 @@ import { HeaderAuth } from '../components/HeaderAuth';
 import { DEFAULT_CITIES } from '../constants/defaultCities';
 import type { RootState } from '../store';
 
+const AUTO_REFRESH_MS = 60 * 1000;
+
 export function Dashboard() {
+  const dispatch = useAppDispatch();
   const favorites = useSelector((s: RootState) => s.favorites.list);
   const citiesToShow = favorites.length > 0 ? favorites : DEFAULT_CITIES;
   const isDefaultView = favorites.length === 0;
+
+  useEffect(() => {
+    citiesToShow.forEach((city) => dispatch(fetchCurrentWeather(city)));
+  }, [dispatch, citiesToShow]);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      citiesToShow.forEach((city) => dispatch(fetchCurrentWeather(city)));
+    }, AUTO_REFRESH_MS);
+    return () => clearInterval(id);
+  }, [dispatch, citiesToShow]);
 
   return (
     <div className="min-h-screen bg-sky-50 text-slate-800">

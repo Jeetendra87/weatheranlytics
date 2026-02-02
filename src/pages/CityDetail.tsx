@@ -30,6 +30,15 @@ export function CityDetail() {
     dispatch(fetchForecast({ city }));
   }, [dispatch, city?.id, city]);
 
+  useEffect(() => {
+    if (!city) return;
+    const id = setInterval(() => {
+      dispatch(fetchCurrentWeather(city));
+      dispatch(fetchForecast({ city }));
+    }, 60 * 1000);
+    return () => clearInterval(id);
+  }, [dispatch, city]);
+
   if (!city) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-sky-50">
