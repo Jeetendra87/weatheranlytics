@@ -10,6 +10,8 @@ A simple web app to view current weather, forecasts, and charts for your favorit
 - **Charts** – Temperature trend, precipitation chance, wind speed (Recharts)
 - **Settings** – Toggle °C / °F (persisted)
 - **Caching** – API responses cached for 60 seconds to limit calls and keep data fresh
+ - **Real-time Data** – Implements automatic data refresh to ensure all fetched data is no older than 60 seconds.
+
 - **Auth (Auth0 + Google)** – Log in / Sign up and Profile page; Log out in header
 
 ## Setup
